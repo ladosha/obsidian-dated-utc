@@ -1,7 +1,7 @@
 {
   "id": "dated-utc",
   "name": "Dated (UTC)",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "minAppVersion": "1.4.0",
   "description": "Writes created and modified date-times in UTC into the frontmatter of notes.",
   "author": "Vladislav Dashtu, based on Dated by spwx",
