@@ -9,7 +9,9 @@ const {
 
 const CREATED = "created";
 const MODIFIED = "modified";
-const FORMAT = "YYYY-MM-DD HH:mm";
+// ISO 8601 in UTC, e.g. 2026-11-08T22:37Z. The trailing Z is a literal: in UTC
+// mode moment's Z token would print "+00:00" instead.
+const FORMAT = "YYYY-MM-DD[T]HH:mm[Z]";
 // Wait for a pause in edits before touching the file, so we don't rewrite it
 // under the cursor on every keystroke.
 const DELAY_MS = 5000;
@@ -49,7 +51,7 @@ module.exports = class Dated extends Plugin {
         this.app.vault.on("create", (file) => {
           if (!this.tracked(file)) return;
           this.arrivals.set(file.path, Date.now());
-          this.stamp(file, fillMissing(file, moment().format(FORMAT)));
+          this.stamp(file, fillMissing(file, timestamp()));
         })
       );
       this.registerEvent(
@@ -62,7 +64,7 @@ module.exports = class Dated extends Plugin {
             file.path,
             setTimeout(() => {
               this.timers.delete(file.path);
-              const now = moment().format(FORMAT);
+              const now = timestamp();
               // Our own write fires "modify" again; the values then match,
               // so this is a no-op and doesn't loop.
               const fm = this.frontmatter(file);
@@ -81,11 +83,11 @@ module.exports = class Dated extends Plugin {
   async addTimestamps(file) {
     const fm = this.frontmatter(file);
     if (fm?.[CREATED] != null && fm[MODIFIED] != null) {
-      new Notice("Dated: this note already has timestamps.");
+      new Notice("Dated (UTC): this note already has timestamps.");
       return;
     }
-    await this.stamp(file, fillMissing(file, moment().format(FORMAT)));
-    new Notice("Dated: timestamps added.");
+    await this.stamp(file, fillMissing(file, timestamp()));
+    new Notice("Dated (UTC): timestamps added.");
   }
 
   tracked(file) {
@@ -111,7 +113,7 @@ module.exports = class Dated extends Plugin {
     this.writing.add(file.path);
     return this.app.fileManager
       .processFrontMatter(file, fn)
-      .catch((err) => console.error("dated:", file.path, err))
+      .catch((err) => console.error("dated-utc:", file.path, err))
       .finally(() => this.writing.delete(file.path));
   }
 };
@@ -163,5 +165,11 @@ function fillMissing(file, now) {
 }
 
 function fsTime(ms, now) {
-  return ms ? moment(ms).format(FORMAT) : now;
+  return ms ? timestamp(ms) : now;
+}
+
+// Epoch milliseconds (or now) as a UTC stamp. Every stamp goes through here so
+// none can slip out in local time.
+function timestamp(ms) {
+  return (ms == null ? moment.utc() : moment.utc(ms)).format(FORMAT);
 }
