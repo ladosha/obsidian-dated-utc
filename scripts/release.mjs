@@ -70,9 +70,11 @@ writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
 writeFileSync(versionsPath, `${JSON.stringify(versions, null, 2)}\n`);
 writeFileSync(packagePath, `${JSON.stringify(pkg, null, 2)}\n`);
 
-// The same command the Release workflow runs, so a broken build fails here
-// first. main.js is gitignored, so this leaves the tree clean.
-run("npm", "run", "build");
+// The same build the Release workflow runs (`npm run build`), so a broken
+// build fails here first. main.js is gitignored, so this leaves the tree
+// clean. It calls node directly because on Windows npm is npm.cmd, which
+// execFileSync can't start without a shell.
+run(process.execPath, "esbuild.config.mjs", "production");
 
 git("add", "manifest.json", "versions.json", "package.json");
 run("git", "commit", ...(edit ? ["-e"] : []), "-m", `Bump to ${version}`);
